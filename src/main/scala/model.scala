@@ -5,8 +5,7 @@ import java.util.Date
 
 case class Cargo(name: String)
 case class Port(name: String)
-case class Ship(name: String, port: Port, cargos: Set[Cargo])
-
+case class Ship(name: String, port: Option[Port] = None, cargos: Set[Cargo] = Set())
 
 package command {
   sealed trait Command { def ship: String }

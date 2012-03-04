@@ -26,11 +26,11 @@ trait CargoService {
           Some(ship.copy(cargos = ship.cargos + cargo)) else None
         }
         case departure: Departure => ports.query(departure.port).flatMap { port =>
-          if (ship.port == port) Some(ship)
+          if (ship.port == Some(port)) Some(ship.copy(port = None))
           else None
         }
         case arrival: Arrival => ports.query(arrival.port).flatMap { port =>
-          if (ship.port != port) Some(ship.copy(port = port))
+          if (ship.port != Some(port)) Some(ship.copy(port = Some(port)))
           else None
         }
       }
