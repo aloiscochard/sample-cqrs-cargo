@@ -4,7 +4,6 @@ package service
 import model._
 
 trait CargoService {
-  import model.event._
 
   trait EntitySupport[T, K] {
     def add(x: T): Option[T]
@@ -16,19 +15,26 @@ trait CargoService {
   trait PortSupport extends EntitySupport[Port, String]
 
   trait ShipSupport extends EntitySupport[Ship, String] {
-    def audit(name: String): Seq[Event]
+    import model.command._
 
-    def load(e: LoadEvent): Option[Ship] =
-      if (!e.ship.cargos.contains(e.cargo)) Some(e.ship.copy(cargos = e.ship.cargos + e.cargo))
-      else None
+    def audit(name: String): Seq[Command]
 
-    def departure(e: DepartureEvent): Option[Ship] =
-      if (e.ship.port == e.port) Some(e.ship)
-      else None
-
-    def arrival(e: ArrivalEvent): Option[Ship] = 
-      if (e.ship.port !=  e.port) Some(e.ship.copy(port = e.port))
-      else None
+    def update(cmd: Command): Option[Ship] = query(cmd.ship).flatMap { ship =>
+      cmd match {
+        case load: Load => cargos.query(load.cargo).flatMap { cargo =>
+          if (!ship.cargos.contains(cargo))
+          Some(ship.copy(cargos = ship.cargos + cargo)) else None
+        }
+        case departure: Departure => ports.query(departure.port).flatMap { port =>
+          if (ship.port == port) Some(ship)
+          else None
+        }
+        case arrival: Arrival => ports.query(arrival.port).flatMap { port =>
+          if (ship.port != port) Some(ship.copy(port = port))
+          else None
+        }
+      }
+    }
   }
 
   val cargos: CargoSupport
@@ -37,7 +43,7 @@ trait CargoService {
 }
 
 object CargoService extends CargoService {
-  import model.event._
+  import model.command._
 
   override val cargos = new CargoSupport {
     override def add(cargo: Cargo) =
@@ -76,11 +82,9 @@ object CargoService extends CargoService {
 
     override def audit(name: String) = events.get(name).getOrElse(Nil)
 
-    override def load(e: LoadEvent) = super.load(e).map(log(e))
-    override def departure(e: DepartureEvent) = super.departure(e).map(log(e))
-    override def arrival(e: ArrivalEvent) = super.arrival(e).map(log(e))
+    override def update(cmd: Command) = super.update(cmd).map(log(cmd))
 
-    private def log(e: Event)(ship: Ship) = {
+    private def log(e: Command)(ship: Ship) = {
       events.get(ship.name).foreach(xs => events += ship.name -> (xs :+ e))
       states -= ship.name
       states += ship.name -> ship
@@ -88,6 +92,6 @@ object CargoService extends CargoService {
     }
 
     private var states = Map[String, Ship]()
-    private var events = Map[String, Seq[Event]]()
+    private var events = Map[String, Seq[Command]]()
   }
 }

@@ -8,9 +8,9 @@ case class Port(name: String)
 case class Ship(name: String, port: Port, cargos: Set[Cargo])
 
 
-package event {
-  sealed trait Event
-  case class LoadEvent(ship: Ship, cargo: Cargo, date: Date) extends Event
-  case class DepartureEvent(ship: Ship, port: Port, date: Date) extends Event
-  case class ArrivalEvent(ship: Ship, port: Port, date: Date) extends Event
+package command {
+  sealed trait Command { def ship: String }
+  case class Load(ship: String, cargo: String, date: Date) extends Command
+  case class Departure(ship: String, port: String, date: Date) extends Command
+  case class Arrival(ship: String, port: String, date: Date) extends Command
 }
